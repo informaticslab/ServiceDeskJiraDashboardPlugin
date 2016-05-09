@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<atlassian-plugin key="${atlassian.plugin.key}" name="${project.name}" plugins-version="2">
+  <plugin-info>
+    <description>${project.description}</description>
+    <version>${project.version}</version>
+    <vendor name="${project.organization.name}" url="${project.organization.url}"/>
+    <param name="plugin-icon">images/pluginIcon.png</param>
+    <param name="plugin-logo">images/pluginLogo.png</param>
+  </plugin-info>
+  <!-- add our i18n resource -->
+  <resource type="i18n" name="i18n" location="servicedeskchart"/>
+  <!-- add our web resources -->
+  <web-resource key="servicedeskchart-resources" name="servicedeskchart Web Resources">
+    <dependency>com.atlassian.auiplugin:ajs</dependency>
+    <resource type="download" name="servicedeskchart.css" location="/css/servicedeskchart.css"/>
+    <resource type="download" name="servicedeskchart.js" location="/js/servicedeskchart.js"/>
+    <resource type="download" name="images/" location="/images"/>
+    <resource type="download" name="under-score.js" location="/js/underscore-min.js"/>
+    <resource type="download" name="Chart-gadget.js" location="/js/Chart-gadget.js"/>
+    <context>servicedeskchart</context>
+  </web-resource>
+  <gadget name="IIU Service Desk Trends" i18n-name-key="iiu-service-desk-trends.name" key="iiu-service-desk-trends" location="gadgets/iiu-service-desk-trends/gadget.xml">
+    <description key="iiu-service-desk-trends.description">The IIU Service Desk Trends Plugin</description>
+  </gadget>
+  <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
+</atlassian-plugin>

@@ -1,0 +1,3 @@
+var getCompletedCumulative =  env.baseUrl + encodeURI("/rest/api/latest/search?jql=project="+ env.projectId + " and resolution in " + env.statuses + " order by resolutiondate desc&maxResults=-1&fields=id,key,resolution,resolutiondate,created");
+var getCompleted =  env.baseUrl + encodeURI("/rest/api/latest/search?jql=project="+ env.projectId + " and resolution in " + env.statuses + " and resolutiondate >=-"+ env.daysToCheck + "d&maxResults=-1&fields=id,key,resolution,resolutiondate,created");
+var getCreated =  env.baseUrl + encodeURI("/rest/api/latest/search?jql=project="+ env.projectId + " order by created desc&maxResults=-1&fiedls=id,key,resolution,resolutiondate,created");

@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+    <ModulePrefs title="IIU Service Desk Trends"
+                 directory_title="__MSG_iiu-service-desk-trends.name__"
+                 description="__MSG_iiu-service-desk-trends.description__"
+                 author="Trung Nguyen"
+                 author_email="tnmissilen@gmail.com"
+                 screenshot='http://www.google.com/gadgets/directory/2661487601-no_preview.gif'
+                 thumbnail='http://www.google.com/gadgets/directory/348515928-no_image_gadget_thm.png'
+                 >
+        <Optional feature="gadget-directory">
+            <Param name="categories">
+                JIRA
+                Charts
+            </Param>
+        </Optional>
+        <Require feature="setprefs"/>
+        <Require feature="dynamic-height"/>
+        #supportedLocales("iiu-service-desk-trends")
+    </ModulePrefs>
+    <UserPref name="isConfigured" datatype="hidden" default_value="false"/>
+    <Content type="html" view="profile,canvas">
+        <![CDATA[
+        #requireResource("com.atlassian.jira.gadgets:common")
+        #requireResource("com.atlassian.gadgets.publisher:ajs-gadgets")
+        #requireResource("org.phiresearchlab.jira.plugins.Chart-gadget:Chart-gadget-resources")
+        #includeResources()
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script charset="utf-8">
+        function resize()
+            {
+              gadgets.window.adjustHeight();
+            }
+           window.onload=resize;
+
+        //function to add days to a given date.
+        function addDays(startDate,numberOfDays)
+        {
+            var returnDate = new Date(
+                                    startDate.getFullYear(),
+                                    startDate.getMonth(),
+                                    startDate.getDate()+numberOfDays,
+                                    startDate.getHours(),
+                                    startDate.getMinutes(),
+                                    startDate.getSeconds());
+            return returnDate;
+        }
+
+        function buildSerie1(data,env) {  // daily tickets resolved
+
+            var categories = [];
+                var serieData = [];
+                var issues = data.issues;
+                var resolveDates = [];
+                // setup buckets
+                var startDate =  addDays(new Date(),env.daysToCheck*-1);
+                for (d = 0; d < env.daysToCheck ; d++) {
+                    nextDate = addDays(startDate,d+1);
+                    dateString = nextDate.toISOString().slice(0,10).replace(/-/g,"");
+                    resolveDates[dateString] = 0;
+                }
+                 categories = Object.keys(resolveDates);
+                for (j=0;j < issues.length; j++) {
+                    dateString = issues[j].fields.resolutiondate.slice(0,10).replace(/-/g,"");
+                    if (resolveDates.hasOwnProperty(dateString)) {
+                        resolveDates[dateString] +=1;
+                    }
+                    if (dateString.localeCompare(categories[0]) == -1) {
+                        break;
+
+                    }
+
+                }
+                //categories.sort(function(a, b){return b-a});
+                categories.sort();
+                for (var x = 0 ; x < categories.length; x++) {
+                    serieData[x] =  resolveDates[categories[x]];
+                }
+                return { categories : categories, serieData : serieData};
+
+        }
+
+        function buildSerie2(data,env) {  // cumulative tickets created
+            var ticketTotal = data.total;
+            var categories = [];
+            var serieData = [];
+            var issues = data.issues;
+            var createDates = [];
+            // setup buckets
+            var startDate =  addDays(new Date(),env.daysToCheck*-1);
+           // console.log('Start date ', startDate);
+           // console.log('Days to check ',env.daysToCheck);
+            for (var d = 0; d < env.daysToCheck ; d++) {
+                nextDate = addDays(startDate,d+1);
+                dateString = nextDate.toISOString().slice(0,10).replace(/-/g,"");
+                createDates[dateString] = 0;
+            }
+            //console.log('Create dates array ', createDates);
+            categories = Object.keys(createDates);
+             for (var j=0;j < issues.length ; j++) {  // get created count for each day for the last xx days
+                //     console.log(issues[j]);
+                try {
+                     dateString = issues[j].fields.created.slice(0,10).replace(/-/g,"");
+                    if (createDates.hasOwnProperty(dateString)) {
+                        createDates[dateString] +=1;
+                    }
+                      if (dateString.localeCompare(categories[0]) == -1) {
+                        break;
+                    }
+                }
+                catch(err) {
+                    // do nothing, just in case issue not exists
+                }
+             }
+            //console.log('Created Dates array ' , createDates);
+
+            //console.log('created date categories ', categories);
+           for(var i = categories.length ; i--;) {
+                if (createDates[categories[i]] != 0 ) {
+                       serieData[i] = ticketTotal;
+                       ticketTotal -= createDates[categories[i]];
+                }
+                else {
+                       serieData[i] = ticketTotal;
+                }
+             }
+             return { categories : categories, serieData : serieData};
+        }
+
+    function buildSerie3(data,env) {  // cumulative tickets resolved
+            var ticketTotal = data.total;
+            var categories = [];
+            var serieData = [];
+            var issues = data.issues;
+            var resolveDates = [];
+            // setup buckets
+            var startDate =  addDays(new Date(),env.daysToCheck*-1);
+           // console.log('Start date ', startDate);
+           // console.log('Days to check ',env.daysToCheck);
+            for (var d = 0; d < env.daysToCheck ; d++) {
+                nextDate = addDays(startDate,d+1);
+                dateString = nextDate.toISOString().slice(0,10).replace(/-/g,"");
+                resolveDates[dateString] = 0;
+            }
+            //console.log('Resovle dates array ', resolveDates);
+              categories = Object.keys(resolveDates);
+             for (var j=0;j < issues.length ; j++) {  // get resolved count for each day for the last xx days
+                //     console.log(issues[j]);
+                try {
+                    dateString = issues[j].fields.resolutiondate.slice(0,10).replace(/-/g,"");
+                    if (resolveDates.hasOwnProperty(dateString)) {
+                        resolveDates[dateString] +=1;
+                    }
+                    // optimization : break loop if date pass the date limit
+                      if (dateString.localeCompare(categories[0]) == -1) {
+                        break;
+                    }
+                }
+                catch(err) {
+                    // do nothing, just in case issue not exists
+                }
+             }
+
+            //console.log('cumulative resolved categories', categories);
+           for(var i = categories.length ; i--;) {
+                //console.log('categories ', categories[i]);
+                if (resolveDates[categories[i]] != 0 ) {
+                       serieData[i] = ticketTotal;
+                       ticketTotal -= resolveDates[categories[i]];
+                }
+                else {
+                       serieData[i] = ticketTotal;
+                }
+             }
+             return { categories : categories, serieData : serieData};
+        }
+   function drawChart(chartData,env) {
+     //console.log('chart data ',chartData);
+     AJS.$('#container').highcharts({
+        chart: {
+            type: 'line'
+        },
+        title: {
+            text: ''
+        },
+        xAxis: {
+            categories: chartData.categories,
+            crosshair: true,
+            labels : {
+                formatter: function () {
+                    return this.value.substr(4,2)+'-'+this.value.substr(6,2)+'-'+this.value.substr(0,4);
+                }
+            }
+        },
+        yAxis: [{
+            min: 0,
+            type : 'linear',
+            title: {
+                text: 'Daily Resolved Tickets',
+                style: {
+                    color: Highcharts.getOptions().colors[0]
+                }
+            },
+
+        },
+        {
+            min: 0,
+            type : 'linear',
+            title: {
+                text: 'Cumulative Ticket Count',
+                 style: {
+                    color: Highcharts.getOptions().colors[1]
+                }
+            },
+            opposite: true
+        },
+        {
+            min: 0,
+            type : 'linear',
+            title: {
+                text: 'Cumulative Ticket Resovled',
+                 style: {
+                    color: Highcharts.getOptions().colors[2]
+                }
+            },
+            opposite: true
+        }],
+        <!--tooltip: {-->
+            <!--headerFormat: '<span style="font-size:10px">{point.key}</span><table>',-->
+            <!--pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +-->
+            <!--'<td style="padding:0"><b>{point.y} ticket(s)</b></td></tr>',-->
+            <!--footerFormat: '</table>',-->
+            <!--shared: false,-->
+            <!--useHTML: true-->
+        <!--},-->
+        plotOptions: {
+            column: {
+                pointPadding: 0.2,
+                borderWidth: 0
+            }
+        },
+        series: [{
+
+            name : 'Tickets Resolved Last ' + env.daysToCheck +' Days',
+            data: chartData.serie1,
+            type: 'column',
+            color: Highcharts.getOptions().colors[0],
+            tooltip: {
+                          headerFormat: '',
+                          pointFormatter: function () {
+                            var pointDate = this.category.substr(4,2)+'-'+this.category.substr(6,2)+'-'+this.category.substr(0,4);
+                            return '<span style="font-size:10px">'+pointDate+'</span><br>' + '<span style="font-size:10px;color:'+ this.series.color + ';padding:0">Tickets Resolved : ' + this.y + '</span>';
+                          }
+                     }
+            },
+            {
+            name : 'Cumulative Tickets created',
+            data : chartData.serie2,
+            type: 'spline',
+            yAxis: 1,
+            color: Highcharts.getOptions().colors[1]
+
+            },
+              {
+            name : 'Cumulative Tickets Resovled',
+            data : chartData.serie3,
+            type: 'spline',
+            yAxis: 1,
+            color: Highcharts.getOptions().colors[2]
+
+            }
+        ]
+    });
+}
+        </script>
+        <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+        <script type="text/javascript">
+            (function () {
+        var productionEnv = {
+            statuses : '("Complete")',
+            baseUrl : "http://localhost:8080",
+            projectId : 'IIUSD',
+            daysToCheck : 30
+        }
+        var jiraDevEnv = {
+            statuses : '("Complete")',
+            baseUrl : "http://localhost:8091",
+            projectId : 'IIUSD',
+            daysToCheck : 30
+        }
+         var stageEnv = {
+            statuses : '("Complete")',
+            baseUrl : "http://localhost:8080",
+            projectId : 'IIUSD',
+            daysToCheck : 30
+        }
+        var localEnv = {
+            statuses : '("Done")',
+            baseUrl :  "__ATLASSIAN_BASE_URL__",
+            projectId : 'SR' ,
+            daysToCheck : 7
+        }
+        var env;
+        if ("__ATLASSIAN_BASE_URL__".indexOf("jira.phiresearchlab") != -1) {
+            env = productionEnv;
+        } else if ("__ATLASSIAN_BASE_URL__".indexOf("jiradev") != -1) {
+            env = jiraDevEnv;
+        }
+        else if ("__ATLASSIAN_BASE_URL__".indexOf("lvsiiu") != -1) {
+            env = stageEnv;
+        }
+        else {
+            env = localEnv;
+        }
+
+        var getCompletedCumulative =  env.baseUrl + encodeURI("/rest/api/latest/search?jql=project="+ env.projectId + " and resolution in " + env.statuses + " order by resolutiondate desc&maxResults=-1&fields=id,key,resolution,resolutiondate,created");
+        var getCompleted =  env.baseUrl + encodeURI("/rest/api/latest/search?jql=project="+ env.projectId + " and resolution in " + env.statuses + " and resolutiondate >=-"+ env.daysToCheck + "d&maxResults=-1&fields=id,key,resolution,resolutiondate,created");
+        var getCreated =  env.baseUrl + encodeURI("/rest/api/latest/search?jql=project="+ env.projectId + " order by created desc&maxResults=-1&fields=id,key,resolution,resolutiondate,created");
+        var chartData = {};
+        AJS.$.ajax({
+            url: getCompletedCumulative,
+            type : 'get',
+            dataType : 'json',
+            success: function(completedDataAll){
+                    serie1 = buildSerie1(completedDataAll,env);
+                    chartData['categories'] = serie1.categories;
+                    chartData['serie1'] = serie1.serieData;
+                    serie3 = buildSerie3(completedDataAll,env)
+                    chartData['serie3'] = serie3.serieData;
+                    drawChart(chartData,env);
+            }
+        });
+        AJS.$.ajax({
+            url: getCreated,
+            type : 'get',
+            dataType : 'json',
+            success: function(data2){
+                serie2 = buildSerie2(data2,env);
+                chartData['serie2'] = serie2.serieData;
+                drawChart(chartData,env);
+            }
+        });
+
+
+    })();
+
+
+        </script>
+
+        ]]>
+    </Content>
+</Module>
